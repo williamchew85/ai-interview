@@ -1,6 +1,7 @@
 import { detectCaptionSource } from "./captions.ts";
 import { TranscriptBuffer } from "./transcript.ts";
 import { CopilotWidget } from "./widget.ts";
+import { segmentTurns, shouldAssist, extractTopics, questionKey } from "@interview-copilot/shared";
 import {
   assistRequestFrom,
   assistStream,
@@ -14,9 +15,9 @@ async function main(): Promise<void> {
   let settings: WidgetSettings = await loadSettings();
   const buffer = new TranscriptBuffer();
   let abort: AbortController | undefined;
-  // Phase 17: de-dup so Auto mode answers each question once.
+  // Phase 17/23: de-dup so Auto mode acts on each turn once.
   const answered = new Set<string>();
-  const qKey = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  let lastHandledKey: string | undefined;
 
   const widget = new CopilotWidget(settings, {
     onSuggest: () => void runSuggest(),
@@ -41,26 +42,31 @@ async function main(): Promise<void> {
       buffer.push(line);
       widget.setTranscript(buffer.recent());
       widget.setCaptionsOn(true);
-      void maybeAutoAnswer(line);
+      void analyseAndMaybeAssist(line);
     });
     // Periodically reflect caption on/off state.
     setInterval(() => widget.setCaptionsOn(source.captionsPresent()), 4000);
   }
 
-  // Phase 17: in Auto mode, fire an answer when a new final question arrives.
-  async function maybeAutoAnswer(line: { text: string; final: boolean }): Promise<void> {
-    if (settings.answerMode !== "auto" || !line.final) return;
-    const key = qKey(line.text);
-    if (!key || answered.has(key)) return;
-    try {
-      const r = await fetch("http://127.0.0.1:8791/api/question-asked", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ mode: settings.mode, provider: settings.provider, model: settings.model, transcript: buffer.recent() }),
-      });
-      const { asked } = (await r.json()) as { asked: boolean };
-      if (asked) { answered.add(key); void autoAnswerCard(line.text.trim()); }
-    } catch { /* server down; manual still works */ }
+  // Phase 23: analyse the caption stream and, in Auto mode, fire assist when the
+  // local shouldAssist signal says a new turn is worth it (no server round-trip).
+  async function analyseAndMaybeAssist(line: { final: boolean }): Promise<void> {
+    if (!line.final) return;
+    const turns = segmentTurns(buffer.recent());
+    const last = turns[turns.length - 1];
+    // Phase 23.5: show the analysis strip (question type + topics) for the latest turn.
+    widget.setAnalysis({
+      questionType: last?.classification.isQuestion ? last.classification.questionType : undefined,
+      topics: extractTopics(turns.slice(-8)),
+    });
+    if (settings.answerMode !== "auto") return;
+    const decision = shouldAssist(turns, settings.mode, lastHandledKey);
+    if (!decision.assist || !decision.turn) return;
+    const key = questionKey(decision.turn.text);
+    if (answered.has(key)) return;
+    answered.add(key);
+    lastHandledKey = key;
+    void autoAnswerCard(decision.turn.text.trim());
   }
 
   // Phase 17.2: run one auto-answer and append it as a Q→A card.

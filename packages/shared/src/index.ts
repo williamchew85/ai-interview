@@ -99,3 +99,4 @@ export * from "./onboarding.ts";
 export * from "./ice.ts";
 export * from "./session-export.ts";
 export * from "./cv.ts";
+export * from "./caption-analysis.ts";
