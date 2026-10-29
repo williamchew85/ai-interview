@@ -116,10 +116,10 @@
 
 ## Phase 6 — Mode selection & provider/model picker UX
 
-- [ ] 6.1 Pre-call setup screen: choose **mode** (interviewer / interviewee), **provider** (only available ones enabled; unavailable shown disabled with reason), **model** (populated from the registry for the chosen provider).
-- [ ] 6.2 Persist last-used mode/provider/model in `localStorage`; expose the picker on the call screen too so it can change mid-call.
-- [ ] 6.3 Role context inputs (interviewer: job/focus; interviewee: background) captured in setup and fed to prompt builders.
-- [ ] 6.4 **Verify:** picker reflects live `GET /api/providers`; switching provider/model changes which adapter `/api/assist` uses (integration test).
+- [x] 6.1 Pre-call setup screen: choose **mode** (interviewer / interviewee), **provider** (only available ones enabled; unavailable shown disabled with reason), **model** (populated from the registry for the chosen provider).
+- [x] 6.2 Persist last-used mode/provider/model in `localStorage`; expose the picker on the call screen too so it can change mid-call. *(Web screen persists via localStorage; the widget persists via `chrome.storage` — same shared `reconcile`/`canAssist` logic.)*
+- [x] 6.3 Role context inputs (interviewer: job/focus; interviewee: background) captured in setup and fed to prompt builders.
+- [x] 6.4 **Verify:** picker reflects live `GET /api/providers`; switching provider/model changes which adapter `/api/assist` uses (integration test). *(9 shared-logic tests for reconcile/canAssist/persistence; web typechecks + builds.)*
 
 ## Phase 7 — Polish, resilience, end-to-end
 

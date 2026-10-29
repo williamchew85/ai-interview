@@ -87,3 +87,6 @@ export type WsMessage =
   | { type: "peer-joined" }
   | { type: "peer-left" }
   | { type: "signal"; data: unknown };
+
+
+export * from "./setup.ts";
