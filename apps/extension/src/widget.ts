@@ -1,5 +1,5 @@
 import type { TranscriptLine, AnswerBlock } from "@interview-copilot/shared";
-import { parseAnswer } from "@interview-copilot/shared";
+import { parseAnswer, normaliseCvText } from "@interview-copilot/shared";
 import type { WidgetSettings } from "./client.ts";
 
 /**
@@ -53,6 +53,8 @@ label { display:block; font-size:11px; color:#9aa0a6; margin:6px 0 2px; }
 input, select, textarea { width:100%; box-sizing:border-box; background:#17181a; color:#e8eaed;
   border:1px solid #3a3d42; border-radius:6px; padding:5px; font:inherit; }
 textarea { resize:vertical; min-height:36px; }
+.cvrow { display:flex; align-items:center; gap:6px; margin:2px 0 4px; }
+.cvname { font-size:11px; color:#81c995; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .foot { display:flex; gap:6px; padding:8px 10px; border-top:1px solid #2c2f34; }
 .hidden { display:none; }
 @media (prefers-reduced-motion: no-preference) { .suggestion.generating::after { content:' ▍'; animation: blink 1s steps(2) infinite; } }
@@ -197,7 +199,7 @@ export class CopilotWidget {
           <input data-act="jobOrRole" value="${this.esc(s.jobOrRole ?? "")}" placeholder="${s.mode === "interviewer" ? "e.g. Staff Engineer" : "e.g. Senior Backend"}" />
           ${s.mode === "interviewer"
             ? `<input data-act="focusAreas" value="${this.esc(s.focusAreas ?? "")}" placeholder="focus areas, e.g. systems design" />`
-            : `<label>Your background</label><textarea data-act="background" placeholder="resume bullets / experience">${this.esc(s.background ?? "")}</textarea>`}
+            : `<label>Your background</label><div class="cvrow"><button data-act="cvUpload" title="Upload a .txt/.md CV; use the web setup screen for PDF/DOCX">📄 Upload CV (.txt/.md)</button><span class="cvname" id="cvName"></span><input data-act="cvFile" id="cvFile" type="file" accept=".txt,.md,.markdown" style="display:none" /></div><textarea data-act="background" placeholder="resume bullets / experience — or upload a .txt/.md CV">${this.esc(s.background ?? "")}</textarea>`}
         </div>`}
         <div class="body">
           ${this.captionsOn ? "" : `<div class="banner">Captions are off. Turn on the meeting's live captions so Copilot can read the conversation.</div>`}
@@ -270,6 +272,26 @@ export class CopilotWidget {
         this.cb.onSettingsChange({ [key]: (e.target as HTMLInputElement).value } as Partial<WidgetSettings>),
       );
     }
+    // Phase 22.4 — CV upload (.txt/.md parsed in-widget; PDF/DOCX -> web setup screen).
+    const cvFile = q('[data-act="cvFile"]') as HTMLInputElement | null;
+    q('[data-act="cvUpload"]')?.addEventListener("click", () => cvFile?.click());
+    cvFile?.addEventListener("change", (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+      const name = file.name.toLowerCase();
+      if (!/\.(txt|md|markdown)$/.test(name)) {
+        this.showToast("In the widget, upload a .txt or .md CV. For PDF/DOCX use the web setup screen.");
+        (e.target as HTMLInputElement).value = "";
+        return;
+      }
+      file.text().then((raw) => {
+        const text = normaliseCvText(raw);
+        if (!text.trim()) { this.showToast("No readable text found in that file."); return; }
+        const nameEl = this.root.getElementById("cvName");
+        if (nameEl) nameEl.textContent = `✓ ${file.name}`;
+        this.cb.onSettingsChange({ background: text });
+      }).catch(() => this.showToast("Could not read that file."));
+    });
   }
 
   destroy(): void { this.host.remove(); }
