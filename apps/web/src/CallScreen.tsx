@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { TranscriptLine, IceConfig } from "@interview-copilot/shared";
-import { DEFAULT_STUN_URLS } from "@interview-copilot/shared";
+import { DEFAULT_STUN_URLS, renderSessionMarkdown, exportFilename } from "@interview-copilot/shared";
 import { TranscriptMerger, WebSpeechSttProvider, isSupported } from "@interview-copilot/stt";
 
 const SERVER_WS = "ws://127.0.0.1:8791/ws";
@@ -163,6 +163,42 @@ export function CallScreen({ room }: { room: string }) {
     if (track) { track.enabled = camOff; setCamOff(!camOff); }
   }
 
+  const [exporting, setExporting] = useState(false);
+
+  /** Phase 10 — explicit, user-initiated export of transcript + AI summary to Markdown. */
+  async function exportSession() {
+    setExporting(true);
+    try {
+      let summary = "";
+      try {
+        const res = await fetch(`${SERVER_HTTP}/api/summary`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ mode: "interviewee", transcript }),
+        });
+        const j = (await res.json()) as { summary?: string };
+        summary = j.summary ?? "";
+      } catch { /* summary is best-effort; export transcript regardless */ }
+
+      const md = renderSessionMarkdown({
+        title: `Interview Copilot — room ${room}`,
+        transcript,
+        suggestions: [],
+        summary,
+        startedAt: transcript[0]?.ts,
+      });
+      const blob = new Blob([md], { type: "text/markdown" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = exportFilename({ startedAt: transcript[0]?.ts });
+      a.click();
+      URL.revokeObjectURL(url);
+    } finally {
+      setExporting(false);
+    }
+  }
+
   return (
     <div style={s.wrap}>
       <div style={s.bar}>
@@ -186,6 +222,9 @@ export function CallScreen({ room }: { room: string }) {
       <div style={s.controls}>
         <button style={s.btn} onClick={toggleMute}>{muted ? "Unmute" : "Mute"}</button>
         <button style={s.btn} onClick={toggleCam}>{camOff ? "Camera on" : "Camera off"}</button>
+        <button style={s.btn} onClick={exportSession} disabled={exporting || transcript.length === 0}>
+          {exporting ? "Exporting…" : "Export .md"}
+        </button>
       </div>
       <div style={s.transcript}>
         <div style={s.tHead}>Transcript</div>

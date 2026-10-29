@@ -15,3 +15,4 @@ export {
 } from "./prompts.ts";
 export { AutoAnswerTrigger, questionKey, type AnswerMode } from "./auto-answer.ts";
 export { buildCodingPrompt, CODING_LANGUAGES, type CodingRequest } from "./coding.ts";
+export { buildSummaryPrompt, type SummaryRequest } from "./summary.ts";

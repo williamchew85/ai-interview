@@ -162,10 +162,10 @@
 - [x] 8.1 Optional coturn config + env-driven ICE server list so calls work across symmetric NATs. (Hosting cost — opt-in.) *(`buildIceConfig` in `packages/shared` reads `TURN_URLS`/`TURN_USERNAME`/`TURN_PASSWORD`/`STUN_URLS` from env; `GET /api/ice` serves it; `CallScreen` fetches it (STUN fallback when the server is down or no TURN set). `.env.example` documents the coturn vars. 6 tests. The operator still provisions the actual coturn relay.)
 
 ## Phase 9 — Server-side STT (Whisper) (D4)
-- [ ] 9.1 Local-Whisper `SttProvider` for privacy / non-Chrome browsers / remote-speaker transcription. **NOTE (2026-10-30):** this is the SAME capability as Phase 20.4 (loopback + local Whisper for the Electron overlay) — build it ONCE in `packages/stt` and consume it from both. Do not implement Whisper twice.
+- [x] 9.1 Local-Whisper `SttProvider` for privacy / non-Chrome browsers / remote-speaker transcription. **NOTE (2026-10-30):** this is the SAME capability as Phase 20.4 (loopback + local Whisper for the Electron overlay) — build it ONCE in `packages/stt` and consume it from both. Do not implement Whisper twice. *(`WhisperTranscriber` in `packages/stt/src/whisper.ts` — injectable runner, `isAvailable()` binary probe, `parseWhisperOutput` handling plain + `[ts]`-prefixed output, `whisperArgv`. `POST /api/transcribe` in the server (real `Bun.spawn` runner wired in the entrypoint; `WHISPER_BINARY` env override) reports `available:false` cleanly when no binary is found. 9 tests. The audio-chunk→WAV recorder that feeds it is the caller's job — Phase 20.4 loopback / a web recorder.)
 
 ## Phase 10 — Session summary & export
-- [ ] 10.1 Post-call AI summary (key questions asked, answer quality notes) via the chosen provider; export transcript + suggestions to Markdown. (Respects the no-storage non-goal: export is explicit, user-initiated.)
+- [x] 10.1 Post-call AI summary (key questions asked, answer quality notes) via the chosen provider; export transcript + suggestions to Markdown. (Respects the no-storage non-goal: export is explicit, user-initiated.) *(`renderSessionMarkdown` + `exportFilename` in `packages/shared` (pure, omits interim lines, marks fallback suggestions, embeds the summary); `buildSummaryPrompt` (mode-aware lens) in `packages/ai`; `POST /api/summary` serves it (degrades to `fallback:true` with no provider). `CallScreen` has an **Export .md** button that fetches the summary then downloads the rendered doc client-side — nothing stored server-side. 13 tests.)
 
 ---
 
