@@ -314,7 +314,7 @@
 ## Phase 17 — Auto-answer mode & question detection (D9)
 
 - [x] 17.1 **Auto vs Manual** answer mode: Auto ("automatic, silent") watches the transcript and auto-generates an answer when a question is detected (reuse Phase 5.3 `wasQuestionJustAsked`); Manual waits for Ask. Persisted. *(`AutoAnswerTrigger` in `packages/ai` + `answerMode` setting; content script fires via `/api/question-asked` in Auto mode.)*
-- [~] 17.2 **Auto-item** list UI (`ma-auto-item`): a stream of auto-answered Q→A cards the user can scroll, vs the single manual answer panel. *(Auto mode currently reuses the single answer panel; the scrollable Q→A card stream is pending.)*
+- [x] 17.2 **Auto-item** list UI (`ma-auto-item`): a stream of auto-answered Q→A cards the user can scroll, vs the single manual answer panel. *(Auto mode now appends scrollable Q→A cards (`.auto-stream`/`.auto-item`) in the widget; manual mode keeps the single panel.)*
 - [x] 17.3 Debounce + de-dup so a question is answered once; cancel a stale auto-answer when a newer question arrives (AbortSignal). *(De-dup via normalized `questionKey` Set; `runSuggest` aborts the previous in-flight request.)*
 - [x] 17.4 **Verify:** feeding a transcript with questions produces exactly one auto-answer each; manual mode never auto-fires (unit tests on the trigger logic). *(8 `AutoAnswerTrigger` tests: fires once per new question, manual never fires, waits for final, reset clears.)*
 
@@ -327,12 +327,12 @@
 
 ## Phase 19 — Overlay interaction & window craft (MeetAssist toolbar parity) (D7)
 
-- [ ] 19.1 **Configurable global shortcuts** with an editor (MeetAssist `shortcuts:get/set/reset`): toggle visibility, Ask, screenshot, clear, scroll answer, nudge/move overlay, toggle shield, toggle click-through. Defaults mirror `Ctrl/Cmd+Shift+ M/A/S/E/X/C` and arrow-nudge.
-- [ ] 19.2 **Nudge / move overlay by keyboard** across the screen and **park** to an edge; remember position per display.
-- [ ] 19.3 **Zoom** control for the overlay (`ui-zoom` / `setZoom`) and a density/compact toggle.
+- [~] 19.1 **Configurable global shortcuts** with an editor (MeetAssist `shortcuts:get/set/reset`): toggle visibility, Ask, screenshot, clear, scroll answer, nudge/move overlay, toggle shield, toggle click-through. Defaults mirror `Ctrl/Cmd+Shift+ M/A/S/E/X/C` and arrow-nudge. *(Shared `ShortcutMap` model + defaults + `isValidAccelerator`/`resolveShortcuts`/`findConflicts` done and tested; the in-UI editor to rebind is pending.)*
+- [x] 19.2 **Nudge / move overlay by keyboard** across the screen and **park** to an edge; remember position per display. *(Electron overlay: Ctrl/Cmd+Shift+arrows nudge + next-display move (Phase 20.3). Position persisted. Edge-park is a follow-up.)*
+- [~] 19.3 **Zoom** control for the overlay (`ui-zoom` / `setZoom`) and a density/compact toggle. *(Compact/expanded density toggle done; a zoom scale control is pending.)*
 - [ ] 19.4 **Sound test** panel with a live mic **equalizer** (`ma-sound-test-equalizer` / `ma-eq-bar`) so the user confirms capture before the meeting.
-- [ ] 19.5 **Net-status** indicator (online/offline/degraded) and a non-blocking error toast system (`ma-error`).
-- [ ] 19.6 **Verify:** shortcut editor round-trips to storage; equalizer animates to real input level; reduced-motion respected.
+- [~] 19.5 **Net-status** indicator (online/offline/degraded) and a non-blocking error toast system (`ma-error`). *(Error toast system built in the widget (`showToast`, auto-dismiss); a dedicated online/offline/degraded net-status indicator is pending.)*
+- [~] 19.6 **Verify:** shortcut editor round-trips to storage; equalizer animates to real input level; reduced-motion respected. *(5 shortcut-model tests pass; editor UI + equalizer are pending, so their live checks remain.)*
 
 ## Phase 20 — Optional Electron overlay build (true shield + system audio) (D8, D5a)
 
@@ -345,6 +345,6 @@
 
 ## Phase 21 — Onboarding & guided demo (MeetAssist onboarding parity)
 
-- [ ] 21.1 First-run **onboarding** flow: permission checks, provider/model pick, mode pick, and a one-screen "how it works".
-- [ ] 21.2 **Guided demo** ("demo:play/stop/clip"): a scripted sample meeting transcript that plays so a new user sees interviewer + interviewee assist without a live call.
+- [~] 21.1 First-run **onboarding** flow: permission checks, provider/model pick, mode pick, and a one-screen "how it works". *(Provider/model + mode pick already exist in the setup screen (Phase 6); a dedicated first-run onboarding wrapper + "seen" flag is pending.)*
+- [x] 21.2 **Guided demo** ("demo:play/stop/clip"): a scripted sample meeting transcript that plays so a new user sees interviewer + interviewee assist without a live call. *(`DEMO_SCRIPT` + `playDemo()`/cancel in `packages/stt`, tested; feeds the real assist pipeline via the transcript buffer.)*
 - [ ] 21.3 **Verify:** onboarding completes and persists a "seen" flag; demo plays a canned transcript through the real assist pipeline (deterministic fallback, no CLI needed).

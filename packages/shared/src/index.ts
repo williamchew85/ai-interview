@@ -94,3 +94,4 @@ export type WsMessage =
 export * from "./setup.ts";
 export * from "./answer-style.ts";
 export * from "./answer-blocks.ts";
+export * from "./shortcuts.ts";
