@@ -387,9 +387,9 @@
       **background** textarea that runs `extractCvText` → fills `context.background` (editable after), shows the
       detected file name + a "clear" action, and a parsing/loading + error state. Persists via the existing
       `saveSetup` (localStorage only). Optionally offer to prefill `jobOrRole` from a detected title line.
-- [~] 22.4 **Extension parity (optional):** the widget's background field gains the same upload affordance
+- [x] 22.4 **Extension parity (optional):** the widget's background field gains the same upload affordance
       (MV3 content scripts can read a `File` from an `<input type=file>` in the shadow DOM — no extra permission),
-      reusing the same `normaliseCvText`. Gate behind "nice-to-have" if the shadow-DOM file input is fiddly. *(Deferred — the web setup screen is the primary place a user prepares a session; the extension widget keeps the free-text background for now. The pure `normaliseCvText` is ready to reuse when added.)*
+      reusing the same `normaliseCvText`. Gate behind "nice-to-have" if the shadow-DOM file input is fiddly. *(Built: the widget's interviewee background section now has a 📄 Upload CV button + hidden shadow-DOM file input — reads .txt/.md, funnels through the shared `normaliseCvText`, fills `background`; PDF/DOCX show a toast pointing to the web setup screen, so the content-script bundle stays small (content.js ~19 kB). No extra manifest permission needed.)*
 - [x] 22.5 **Verify:** `normaliseCvText` unit tests (bullets, whitespace, cap) green; a `.txt` upload round-trips
       into `context.background` and then into the interviewee prompt (`contextBlock` includes it); `bun run typecheck`
       green; web builds. *(Live PDF/DOCX parse + the actual file-picker interaction need a user run — this host can't
