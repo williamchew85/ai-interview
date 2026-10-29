@@ -8,14 +8,17 @@
     "packages/ai",
     "packages/stt",
     "apps/server",
-    "apps/extension"
+    "apps/extension",
+    "apps/web"
   ],
   "scripts": {
-    "typecheck": "node node_modules/typescript/bin/tsc -p tsconfig.json && node node_modules/typescript/bin/tsc -p apps/extension/tsconfig.json --noEmit",
+    "typecheck": "node node_modules/typescript/bin/tsc -p tsconfig.json && node node_modules/typescript/bin/tsc -p apps/extension/tsconfig.json --noEmit && node node_modules/typescript/bin/tsc -p apps/web/tsconfig.json --noEmit",
     "build": "node node_modules/typescript/bin/tsc -p tsconfig.json",
     "test": "bun test",
     "dev:server": "bun run --cwd apps/server dev",
-    "ext:build": "node node_modules/vite/bin/vite.js build --config apps/extension/vite.config.ts",
+    "dev:web": "bun x vite --config apps/web/vite.config.ts",
+    "ext:build": "bun x vite build --config apps/extension/vite.config.ts",
+    "web:build": "bun x vite build --config apps/web/vite.config.ts",
     "clean": "node -e \"require('fs').rmSync('node_modules/.tmp',{recursive:true,force:true})\""
   },
   "devDependencies": {
