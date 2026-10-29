@@ -348,3 +348,49 @@
 - [x] 21.1 First-run **onboarding** flow: permission checks, provider/model pick, mode pick, and a one-screen "how it works". *(`Onboarding.tsx` one-screen "how it works" (`ONBOARDING_STEPS`) gated on a `ic_onboarding_seen` flag via pure `hasSeenOnboarding`/`markOnboardingSeen` helpers in `packages/shared`; `main.tsx` shows it on first run, then the setup screen. Provider/model + mode pick live in the setup screen (Phase 6). Explicit mic/screen permission prompts are a follow-up on the Electron build.)*
 - [x] 21.2 **Guided demo** ("demo:play/stop/clip"): a scripted sample meeting transcript that plays so a new user sees interviewer + interviewee assist without a live call. *(`DEMO_SCRIPT` + `playDemo()`/cancel in `packages/stt`, tested; feeds the real assist pipeline via the transcript buffer.)*
 - [ ] 21.3 **Verify:** onboarding completes and persists a "seen" flag; demo plays a canned transcript through the real assist pipeline (deterministic fallback, no CLI needed).
+
+---
+
+# ENHANCEMENT (2026-10-30) — Upload CV to ground answers
+
+> **User request (2026-10-30):** let the candidate **upload their CV / resume** so interviewee-mode
+> answers are grounded in their real experience, instead of hand-typing resume bullets into the
+> free-text **background** field. The parsed CV text simply populates `RoleContext.background`
+> (and optionally `jobOrRole`), so it flows through the EXISTING prompt pipeline (`contextBlock` in
+> `packages/ai/src/prompts.ts`) with no new assist path. This EXTENDS Phase 6's setup — it is not a
+> new surface. Non-goal unchanged: the CV is parsed in-memory and persisted only in the user's own
+> `localStorage` setup state; nothing is uploaded to any server or stored server-side.
+
+## DECISIONS (CV upload) — resolve before Phase 22
+
+- **D11 — HOW to parse an uploaded CV, keyless + local-first.**
+  - **Default chosen:** **tiered, dependency-light, all client-side.**
+    - **.txt / .md** — read directly (`File.text()`), zero deps.
+    - **.pdf** — extract text with a lazy-loaded `pdfjs-dist` (`getDocument` → per-page `getTextContent`),
+      imported dynamically so it is not in the main bundle and a user who never uploads a PDF never pays for it.
+    - **.docx** — extract text with a lazy-loaded `mammoth` (`extractRawText`), same dynamic-import treatment.
+    - Keep the **core parse/normalise logic pure** in `packages/shared` (string → cleaned background text):
+      whitespace collapse, bullet normalisation, length cap. The format-specific extractors live in the
+      web app (they touch `File`/DOM); the pure normaliser + a `.txt` path are unit-tested without a browser.
+  - *Rejected:* a server-side parse route (breaks local-first / no-storage; a CV is sensitive) and an
+    LLM "read this PDF" call (needs a vision/file model + a round-trip just to extract text a parser gives free).
+
+## Phase 22 — Upload CV / resume to ground answers (extends Phase 6 / D11)
+
+- [x] 22.1 **Pure CV normaliser** in `packages/shared` (`normaliseCvText(raw): string`): collapse whitespace,
+      normalise bullet glyphs (•/–/*) to "- ", strip page-number/header noise, cap to a sane length (e.g. ~8 KB)
+      so it fits the prompt budget. Framework-free + unit-tested.
+- [x] 22.2 **Format extractors** in `apps/web` (`extractCvText(file): Promise<string>`): `.txt`/`.md` via
+      `File.text()`; `.pdf` via a **dynamically-imported** `pdfjs-dist`; `.docx` via a **dynamically-imported**
+      `mammoth`. Unknown/oversized types rejected with a clear message. Each extractor funnels through 22.1. *(`apps/web/src/cv-extract.ts`: `.txt`/`.md` direct; `.pdf`/`.docx` resolved at RUNTIME via a variable specifier so the build never hard-depends on them — they are `optionalDependencies`, and absence degrades to a clear `CvParseError` telling the user to `bun add` them. 5 MB cap; scanned-image-PDF (no text layer) caught.)*
+- [x] 22.3 **Setup-screen upload control** (Phase 6 UI): a file picker + drag-and-drop zone beside the
+      **background** textarea that runs `extractCvText` → fills `context.background` (editable after), shows the
+      detected file name + a "clear" action, and a parsing/loading + error state. Persists via the existing
+      `saveSetup` (localStorage only). Optionally offer to prefill `jobOrRole` from a detected title line.
+- [~] 22.4 **Extension parity (optional):** the widget's background field gains the same upload affordance
+      (MV3 content scripts can read a `File` from an `<input type=file>` in the shadow DOM — no extra permission),
+      reusing the same `normaliseCvText`. Gate behind "nice-to-have" if the shadow-DOM file input is fiddly. *(Deferred — the web setup screen is the primary place a user prepares a session; the extension widget keeps the free-text background for now. The pure `normaliseCvText` is ready to reuse when added.)*
+- [x] 22.5 **Verify:** `normaliseCvText` unit tests (bullets, whitespace, cap) green; a `.txt` upload round-trips
+      into `context.background` and then into the interviewee prompt (`contextBlock` includes it); `bun run typecheck`
+      green; web builds. *(Live PDF/DOCX parse + the actual file-picker interaction need a user run — this host can't
+      drive a browser file dialog; the `.txt` path and the pure normaliser are fully testable here.)*

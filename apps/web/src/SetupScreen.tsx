@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { ProviderInfo } from "@interview-copilot/shared";
 import {
   reconcile,
@@ -6,9 +6,11 @@ import {
   loadSetup,
   saveSetup,
   selectedProvider,
+  guessRoleTitle,
   type SetupState,
 } from "@interview-copilot/shared";
 import { fetchProviders } from "./api.ts";
+import { extractCvText, CvParseError } from "./cv-extract.ts";
 
 export function SetupScreen() {
   const [providers, setProviders] = useState<ProviderInfo[]>([]);
@@ -125,11 +127,19 @@ export function SetupScreen() {
               placeholder="e.g. Senior Backend Engineer"
             />
             <label style={styles.label}>Your background</label>
+            <CvUpload
+              onText={(text, roleGuess) =>
+                patchContext({
+                  background: text,
+                  ...(roleGuess && !state.context.jobOrRole ? { jobOrRole: roleGuess } : {}),
+                })
+              }
+            />
             <textarea
               style={{ ...styles.input, minHeight: 72, resize: "vertical" }}
               value={state.context.background ?? ""}
               onChange={(e) => patchContext({ background: e.target.value })}
-              placeholder="Resume bullets / key experience the AI should ground answers in"
+              placeholder="Resume bullets / key experience the AI should ground answers in — or upload your CV above"
             />
           </>
         )}
@@ -140,6 +150,68 @@ export function SetupScreen() {
           ? `Ready — ${provider?.displayName} · ${state.model}. Open the extension widget in your Meet/Teams tab.`
           : `Not ready: ${ready.reason}`}
       </div>
+    </div>
+  );
+}
+
+function CvUpload({ onText }: { onText: (text: string, roleGuess?: string) => void }) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [status, setStatus] = useState<"idle" | "parsing" | "done" | "error">("idle");
+  const [fileName, setFileName] = useState<string>();
+  const [error, setError] = useState<string>();
+  const [dragOver, setDragOver] = useState(false);
+
+  async function handle(file: File | undefined) {
+    if (!file) return;
+    setStatus("parsing");
+    setError(undefined);
+    setFileName(file.name);
+    try {
+      const text = await extractCvText(file);
+      onText(text, guessRoleTitle(text));
+      setStatus("done");
+    } catch (e) {
+      setStatus("error");
+      setError(e instanceof CvParseError ? e.message : (e as Error).message);
+    }
+  }
+
+  function clear() {
+    setStatus("idle");
+    setFileName(undefined);
+    setError(undefined);
+    if (inputRef.current) inputRef.current.value = "";
+    onText("");
+  }
+
+  return (
+    <div style={{ marginBottom: 6 }}>
+      <div
+        onClick={() => inputRef.current?.click()}
+        onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+        onDragLeave={() => setDragOver(false)}
+        onDrop={(e) => { e.preventDefault(); setDragOver(false); void handle(e.dataTransfer.files?.[0]); }}
+        style={{ ...cvStyles.drop, ...(dragOver ? cvStyles.dropOver : {}) }}
+      >
+        <input
+          ref={inputRef}
+          type="file"
+          accept=".pdf,.docx,.txt,.md,.markdown"
+          style={{ display: "none" }}
+          onChange={(e) => void handle(e.target.files?.[0] ?? undefined)}
+        />
+        {status === "parsing" ? (
+          <span>Parsing {fileName}…</span>
+        ) : status === "done" ? (
+          <span style={{ color: "#81c995" }}>✓ Loaded {fileName} — edit below if needed</span>
+        ) : (
+          <span style={{ color: "#9aa0a6" }}>📄 Upload CV (.pdf, .docx, .txt) or drag it here</span>
+        )}
+      </div>
+      {error && <div style={cvStyles.err}>{error}</div>}
+      {(status === "done" || status === "error") && (
+        <button type="button" onClick={clear} style={cvStyles.clear}>Clear</button>
+      )}
     </div>
   );
 }
@@ -169,4 +241,11 @@ const styles: Record<string, React.CSSProperties> = {
   warn: { background: "#3b2f17", color: "#fdd663", border: "1px solid #5c4a1f", borderRadius: 8, padding: 10, marginBottom: 12, fontSize: 13 },
   ready: { marginTop: 14, padding: 10, borderRadius: 8, background: "#17291b", color: "#81c995", border: "1px solid #2f5133", fontSize: 13 },
   notReady: { marginTop: 14, padding: 10, borderRadius: 8, background: "#2a2d31", color: "#9aa0a6", border: "1px solid #3a3d42", fontSize: 13 },
+};
+
+const cvStyles: Record<string, React.CSSProperties> = {
+  drop: { border: "1px dashed #3a3d42", borderRadius: 8, padding: 12, textAlign: "center", cursor: "pointer", fontSize: 13, background: "#17181a" },
+  dropOver: { borderColor: "#8ab4f8", background: "#1b2a3f" },
+  err: { color: "#f28b82", fontSize: 12, marginTop: 6 },
+  clear: { marginTop: 6, background: "transparent", color: "#8ab4f8", border: "none", cursor: "pointer", fontSize: 12, padding: 0 },
 };
