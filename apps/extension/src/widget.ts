@@ -1,4 +1,5 @@
-import type { TranscriptLine } from "@interview-copilot/shared";
+import type { TranscriptLine, AnswerBlock } from "@interview-copilot/shared";
+import { parseAnswer } from "@interview-copilot/shared";
 import type { WidgetSettings } from "./client.ts";
 
 /**
@@ -122,6 +123,26 @@ export class CopilotWidget {
     return s.replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]!));
   }
 
+  /** Phase 16: render an answer as text / bullet / code / mermaid blocks. */
+  private renderBlocks(text: string): string {
+    const blocks: AnswerBlock[] = parseAnswer(text);
+    return blocks
+      .map((b) => {
+        if (b.kind === "bullets") {
+          return `<ul style="margin:4px 0 4px 18px;padding:0">${b.items.map((i) => `<li>${this.esc(i)}</li>`).join("")}</ul>`;
+        }
+        if (b.kind === "code") {
+          return `<pre style="background:#0d0f12;border:1px solid #2c2f34;border-radius:6px;padding:8px;overflow:auto;margin:4px 0"><code>${this.esc(b.code)}</code></pre>`;
+        }
+        if (b.kind === "mermaid") {
+          // Rendering a diagram needs the mermaid lib; show the source labelled until that lands.
+          return `<pre style="background:#0d0f12;border:1px dashed #5c4a1f;border-radius:6px;padding:8px;overflow:auto;margin:4px 0" title="mermaid diagram source"><code>${this.esc(b.code)}</code></pre>`;
+        }
+        return `<div style="margin:4px 0">${this.esc(b.text)}</div>`;
+      })
+      .join("");
+  }
+
   private render(): void {
     const s = this.settings;
     const compact = s.compact;
@@ -157,7 +178,7 @@ export class CopilotWidget {
         </div>`}
         <div class="body">
           ${this.captionsOn ? "" : `<div class="banner">Captions are off. Turn on the meeting's live captions so Copilot can read the conversation.</div>`}
-          <div class="suggestion ${this.generating ? "generating" : ""}">${this.suggestionText ? this.esc(this.suggestionText) : '<span style="color:#9aa0a6">No suggestion yet — press "' + suggestLabel + '".</span>'}</div>
+          <div class="suggestion ${this.generating ? "generating" : ""}">${this.suggestionText ? this.renderBlocks(this.suggestionText) : '<span style="color:#9aa0a6">No suggestion yet — press "' + suggestLabel + '".</span>'}</div>
           <div class="meta">${this.metaText ? `<span class="chip">${this.esc(this.metaText)}</span>` : ""}${this.suggestionText ? '<button data-act="copy">Copy</button>' : ""}</div>
           ${compact ? "" : `
           <div class="transcript">

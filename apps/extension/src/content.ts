@@ -14,6 +14,9 @@ async function main(): Promise<void> {
   let settings: WidgetSettings = await loadSettings();
   const buffer = new TranscriptBuffer();
   let abort: AbortController | undefined;
+  // Phase 17: de-dup so Auto mode answers each question once.
+  const answered = new Set<string>();
+  const qKey = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 
   const widget = new CopilotWidget(settings, {
     onSuggest: () => void runSuggest(),
@@ -38,9 +41,26 @@ async function main(): Promise<void> {
       buffer.push(line);
       widget.setTranscript(buffer.recent());
       widget.setCaptionsOn(true);
+      void maybeAutoAnswer(line);
     });
     // Periodically reflect caption on/off state.
     setInterval(() => widget.setCaptionsOn(source.captionsPresent()), 4000);
+  }
+
+  // Phase 17: in Auto mode, fire an answer when a new final question arrives.
+  async function maybeAutoAnswer(line: { text: string; final: boolean }): Promise<void> {
+    if (settings.answerMode !== "auto" || !line.final) return;
+    const key = qKey(line.text);
+    if (!key || answered.has(key)) return;
+    try {
+      const r = await fetch("http://127.0.0.1:8791/api/question-asked", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ mode: settings.mode, provider: settings.provider, model: settings.model, transcript: buffer.recent() }),
+      });
+      const { asked } = (await r.json()) as { asked: boolean };
+      if (asked) { answered.add(key); void runSuggest(); }
+    } catch { /* server down; manual still works */ }
   }
 
   async function patch(p: Partial<WidgetSettings>): Promise<void> {

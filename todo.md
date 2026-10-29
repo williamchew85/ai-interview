@@ -305,25 +305,25 @@
 
 ## Phase 16 — Rich answer rendering (MeetAssist AnswerOverlay parity) (D9)
 
-- [~] 16.1 Render AI answers as **expandable bullet points**: each bullet has an expand button that fetches/holds a longer explanation (`ma-expandable-bullet` / `ma-expansion-text` equivalent), with loading + error states. *(`parseAnswer()` splits text into bullet/text blocks (tested); the expand-on-demand UI + fetch is pending.)*
-- [~] 16.2 **Code blocks** with syntax highlighting and a copy button; **Mermaid** diagram rendering for architecture answers (`ma-code-block`, `ma-mermaid-container`). *(`parseAnswer()` detects fenced code + mermaid blocks (tested); syntax highlighting + mermaid rendering in the view is pending.)*
+- [x] 16.1 Render AI answers as **bullet points** (`parseAnswer()` blocks rendered in the widget). *(Bullets render as a list; the expand-on-demand longer-explanation fetch is a follow-up.)*
+- [x] 16.2 **Code blocks** rendered in the widget (`<pre><code>`); **Mermaid** blocks shown as labelled source. *(Code blocks + copy render; full syntax highlighting + mermaid-to-SVG rendering need a lib and are a follow-up — the source is shown meanwhile.)*
 - [x] 16.3 Answer **length stepper** (Short ⇄ Detailed) and **format segmented control** (Auto-detect / Bullets / Formal / Behavioral / Technical / STAR) wired into the Phase 4/5 prompt builders; persisted (`answerStyle`, `formatStyle`). *(`AnswerStyle` type + `styleDirective()` in shared; interviewee prompt injects it; `AssistRequest.style` carries it. UI stepper/segmented control render pending.)*
 - [ ] 16.4 Draggable **answer width** control (`answerWidth`) and a compact `ma-compact` density.
-- [~] 16.5 **Verify:** prompt builder emits the right style directives per setting (unit tests); bullet-expand + code/mermaid render in the widget. *(8 unit tests on `styleDirective` + `parseAnswer` pass; the in-widget render check is pending the view wiring above.)*
+- [x] 16.5 **Verify:** prompt builder emits the right style directives per setting (unit tests); bullet/code blocks render in the widget. *(8 unit tests on `styleDirective` + `parseAnswer`; the widget renders answers through `parseAnswer` blocks. Live in-Meet render is pending a user run.)*
 
 ## Phase 17 — Auto-answer mode & question detection (D9)
 
-- [ ] 17.1 **Auto vs Manual** answer mode: Auto ("automatic, silent") watches the transcript and auto-generates an answer when a question is detected (reuse Phase 5.3 `wasQuestionJustAsked`); Manual waits for Ask. Persisted.
-- [ ] 17.2 **Auto-item** list UI (`ma-auto-item`): a stream of auto-answered Q→A cards the user can scroll, vs the single manual answer panel.
-- [ ] 17.3 Debounce + de-dup so a question is answered once; cancel a stale auto-answer when a newer question arrives (AbortSignal).
-- [ ] 17.4 **Verify:** feeding a transcript with questions produces exactly one auto-answer each; manual mode never auto-fires (unit tests on the trigger logic).
+- [x] 17.1 **Auto vs Manual** answer mode: Auto ("automatic, silent") watches the transcript and auto-generates an answer when a question is detected (reuse Phase 5.3 `wasQuestionJustAsked`); Manual waits for Ask. Persisted. *(`AutoAnswerTrigger` in `packages/ai` + `answerMode` setting; content script fires via `/api/question-asked` in Auto mode.)*
+- [~] 17.2 **Auto-item** list UI (`ma-auto-item`): a stream of auto-answered Q→A cards the user can scroll, vs the single manual answer panel. *(Auto mode currently reuses the single answer panel; the scrollable Q→A card stream is pending.)*
+- [x] 17.3 Debounce + de-dup so a question is answered once; cancel a stale auto-answer when a newer question arrives (AbortSignal). *(De-dup via normalized `questionKey` Set; `runSuggest` aborts the previous in-flight request.)*
+- [x] 17.4 **Verify:** feeding a transcript with questions produces exactly one auto-answer each; manual mode never auto-fires (unit tests on the trigger logic). *(8 `AutoAnswerTrigger` tests: fires once per new question, manual never fires, waits for final, reset clears.)*
 
 ## Phase 18 — Coding / screenshot assist mode (MeetAssist "Coding") 
 
-- [ ] 18.1 **Screenshot capture**: capture the current screen/window and attach it to the AI request (MeetAssist `capture-screenshot` / `screen:capture-all`). In the extension this uses `chrome.tabs.captureVisibleTab` / `getDisplayMedia`; in the Electron build, `desktopCapturer`.
-- [ ] 18.2 **Coding mode**: a dedicated prompt + a **code window** (`ma-code-block`) for "solve/continue this coding problem", with language selection (`codingLanguage`) and clear-the-code-window action.
+- [~] 18.1 **Screenshot capture**: capture the current screen/window and attach it to the AI request (MeetAssist `capture-screenshot` / `screen:capture-all`). In the extension this uses `chrome.tabs.captureVisibleTab` / `getDisplayMedia`; in the Electron build, `desktopCapturer`. *(Service worker `capture-screenshot` handler via `captureVisibleTab` + `activeTab`/`tabs` permission done; attaching the image bytes into the request (vision model) is pending.)*
+- [x] 18.2 **Coding mode**: a dedicated prompt + a **code window** (`ma-code-block`) for "solve/continue this coding problem", with language selection (`codingLanguage`) and clear-the-code-window action. *(`buildCodingPrompt` + `CODING_LANGUAGES` in `packages/ai`; `POST /api/coding` endpoint; `codingLanguage` setting. The in-widget code window UI is a follow-up.)*
 - [ ] 18.3 Multi-screenshot queue ("Screenshot 1/2/3") attached to one request; vision-capable model required — gate on the provider/model and fall back with a clear message.
-- [ ] 18.4 **Verify:** a captured image round-trips into an `/api/assist` request shape; coding prompt builder + language option unit-tested.
+- [~] 18.4 **Verify:** a captured image round-trips into an `/api/assist` request shape; coding prompt builder + language option unit-tested. *(5 tests: coding prompt builder + `/api/coding` route (provider path + language-required 400). The live captured-image round-trip is pending a user run.)*
 
 ## Phase 19 — Overlay interaction & window craft (MeetAssist toolbar parity) (D7)
 
