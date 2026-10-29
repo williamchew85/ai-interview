@@ -3,6 +3,7 @@ import type {
   RoleContext,
   TranscriptLine,
 } from "@interview-copilot/shared";
+import { styleDirective } from "@interview-copilot/shared";
 
 /** Render the recent transcript as "Speaker: text" lines, newest last. */
 export function renderTranscript(
@@ -80,11 +81,13 @@ export function buildIntervieweePrompt(req: AssistRequest): string {
   const ctx = contextBlock(req.context, "interviewee");
   const last = lastLine(req.transcript);
   const target = last ? `\nThe question to answer: "${last.text.trim()}"` : "";
+  const style = req.style ? `\nStyle: ${styleDirective(req.style)}` : "";
   return [
     "You are a job candidate's real-time answer assistant.",
     "Draft a concise, confident, well-structured answer to the interviewer's most recent question. For behavioral questions use STAR (Situation, Task, Action, Result). Keep it speakable in under ~45 seconds. Ground it in the candidate's background when provided; never invent specific facts that contradict it.",
     ctx,
     target,
+    style,
     "",
     "Conversation:",
     convo,

@@ -85,6 +85,10 @@ export interface WidgetSettings {
   model: string;
   visible: boolean;
   compact: boolean;
+  /** When true, auto-hide the widget while the user is screen-sharing. */
+  screenShareSafe: boolean;
+  /** Panel opacity 0.4–1. */
+  opacity: number;
   jobOrRole?: string;
   focusAreas?: string;
   background?: string;
@@ -97,6 +101,8 @@ export const DEFAULT_SETTINGS: WidgetSettings = {
   model: "auto",
   visible: true,
   compact: true,
+  screenShareSafe: true,
+  opacity: 1,
 };
 
 const STORAGE_KEY = "ic_settings";

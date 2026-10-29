@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; style-src 'self' 'unsafe-inline'; connect-src http://127.0.0.1:8791 http://localhost:8791;" />
+  <title>Interview Copilot</title>
+  <style>
+    :root { color-scheme: dark; }
+    html, body { margin: 0; background: transparent; font: 13px/1.45 system-ui, sans-serif; color: #e8eaed; }
+    .panel { background: #1f2023; border: 1px solid #3a3d42; border-radius: 10px; overflow: hidden;
+             box-shadow: 0 8px 28px rgba(0,0,0,.5); -webkit-app-region: drag; }
+    .bar { display: flex; align-items: center; gap: 6px; padding: 8px 10px; background: #17181a; border-bottom: 1px solid #2c2f34; }
+    .bar .title { font-weight: 600; flex: 1; }
+    button { -webkit-app-region: no-drag; background: #2a2d31; color: #e8eaed; border: 1px solid #3a3d42;
+             border-radius: 6px; padding: 4px 9px; cursor: pointer; font-size: 12px; }
+    .shield-on { border-color: #2f5133; color: #81c995; }
+    .body { padding: 10px; -webkit-app-region: no-drag; }
+    .suggestion { white-space: pre-wrap; background: #17181a; border: 1px solid #2c2f34; border-radius: 8px; padding: 9px; min-height: 40px; }
+    .chip { font-size: 11px; padding: 2px 7px; border-radius: 999px; background: #2a2d31; border: 1px solid #3a3d42; }
+    .foot { display: flex; gap: 6px; padding: 8px 10px; border-top: 1px solid #2c2f34; -webkit-app-region: no-drag; }
+    .foot button { flex: 1; }
+  </style>
+</head>
+<body>
+  <div class="panel">
+    <div class="bar">
+      <span class="title">🎯 Interview Copilot</span>
+      <button id="shield" title="Shield: hide from screen capture">🛡 Shield</button>
+      <button id="hide" title="Hide (Ctrl+Shift+M)">✕</button>
+    </div>
+    <div class="body">
+      <div id="status" class="chip">connecting…</div>
+      <div id="sug" class="suggestion" style="margin-top:8px">Press Suggest. The shield keeps this window out of screen shares.</div>
+    </div>
+    <div class="foot">
+      <button id="suggest">Suggest</button>
+      <button id="clickthrough">Click-through</button>
+    </div>
+  </div>
+  <script src="./renderer.js"></script>
+</body>
+</html>

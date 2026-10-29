@@ -10,6 +10,7 @@ export default defineConfig({
   resolve: {
     alias: {
       "@interview-copilot/shared": resolve(dir, "../../packages/shared/src/index.ts"),
+      "@interview-copilot/stt": resolve(dir, "../../packages/stt/src/index.ts"),
     },
   },
   server: { host: "127.0.0.1", port: 8790 },
