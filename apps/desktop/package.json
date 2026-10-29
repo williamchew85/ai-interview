@@ -1,0 +1,14 @@
+{
+  "name": "@interview-copilot/desktop",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Optional Electron overlay build — true content-protection shield + system-audio loopback (D8/D5a).",
+  "main": "dist/main.js",
+  "scripts": {
+    "desktop:build": "node ../../node_modules/typescript/bin/tsc -p tsconfig.json && node -e \"const fs=require('fs');fs.cpSync('src/renderer','dist/renderer',{recursive:true})\"",
+    "desktop:start": "electron ."
+  },
+  "devDependencies": {
+    "electron": "^33.0.2"
+  }
+}

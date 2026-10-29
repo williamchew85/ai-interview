@@ -5,4 +5,5 @@ dist/
 .DS_Store
 apps/extension/dist/
 apps/web/dist/
+apps/desktop/dist/
 .kiro/settings/*.lock

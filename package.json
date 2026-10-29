@@ -9,10 +9,11 @@
     "packages/stt",
     "apps/server",
     "apps/extension",
-    "apps/web"
+    "apps/web",
+    "apps/desktop"
   ],
   "scripts": {
-    "typecheck": "node node_modules/typescript/bin/tsc -p tsconfig.json && node node_modules/typescript/bin/tsc -p apps/extension/tsconfig.json --noEmit && node node_modules/typescript/bin/tsc -p apps/web/tsconfig.json --noEmit",
+    "typecheck": "node node_modules/typescript/bin/tsc -p tsconfig.json && node node_modules/typescript/bin/tsc -p apps/extension/tsconfig.json --noEmit && node node_modules/typescript/bin/tsc -p apps/web/tsconfig.json --noEmit && node node_modules/typescript/bin/tsc -p apps/desktop/tsconfig.json --noEmit",
     "build": "node node_modules/typescript/bin/tsc -p tsconfig.json",
     "test": "bun test",
     "dev:server": "bun run --cwd apps/server dev",

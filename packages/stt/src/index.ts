@@ -21,3 +21,17 @@ export interface SttProvider {
   ): void | Promise<void>;
   stop(): void | Promise<void>;
 }
+
+/**
+ * REMOTE-SPEAKER LIMITATION (documented, Phase 3.2):
+ * The Web Speech API transcribes only the local microphone stream — a browser
+ * cannot transcribe the remote peer's audio directly. In the standalone call
+ * mode each peer therefore transcribes ITS OWN mic (speaker="local" locally)
+ * and sends its final lines over the WebRTC data channel to the other side,
+ * which re-tags them speaker="remote". The TranscriptMerger below unifies both
+ * streams. The overlay path (Phase 12) sidesteps this entirely by reading the
+ * meeting's own captions from the DOM.
+ */
+
+export { TranscriptMerger } from "./merge.ts";
+export { WebSpeechSttProvider, isSupported } from "./web-speech.ts";

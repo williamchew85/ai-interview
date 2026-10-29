@@ -130,10 +130,11 @@ export class CopilotWidget {
     const lines = this.transcript.slice(-20);
     this.root.innerHTML = `
       <style>${STYLE}</style>
-      <div class="panel ${compact ? "compact" : ""}">
+      <div class="panel ${compact ? "compact" : ""}" style="opacity:${s.opacity ?? 1}">
         <div class="bar">
           <span class="title">🎯 Interview Copilot</span>
           <span class="chip">${modeLabel}</span>
+          <button data-act="shareSafe" title="${s.screenShareSafe ? "Auto-hide while screen-sharing: ON" : "Auto-hide while screen-sharing: OFF"}">${s.screenShareSafe ? "🛡" : "👁"}</button>
           <button data-act="compact" title="Compact/expanded">${compact ? "▣" : "▢"}</button>
           <button data-act="hide" title="Hide (Alt+Shift+I)">✕</button>
         </div>
@@ -194,6 +195,9 @@ export class CopilotWidget {
     const q = (sel: string) => this.root.querySelector(sel) as HTMLElement | null;
     q('[data-act="compact"]')?.addEventListener("click", () => this.cb.onToggleCompact());
     q('[data-act="hide"]')?.addEventListener("click", () => this.cb.onHide());
+    q('[data-act="shareSafe"]')?.addEventListener("click", () =>
+      this.cb.onSettingsChange({ screenShareSafe: !this.settings.screenShareSafe }),
+    );
     q('[data-act="toggleMode"]')?.addEventListener("click", () => this.cb.onToggleMode());
     q('[data-act="suggest"]')?.addEventListener("click", () =>
       this.generating ? this.cb.onCancel() : this.cb.onSuggest(),

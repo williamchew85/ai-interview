@@ -77,6 +77,8 @@ export interface AssistRequest {
   /** Recent transcript lines (most recent last). */
   transcript: TranscriptLine[];
   context?: RoleContext;
+  /** Answer-styling options (Phase 16 / D9). */
+  style?: import("./answer-style.ts").AnswerStyle;
   /** Disable the LLM call and force the deterministic suggester (used in tests/CI). */
   forceFallback?: boolean;
 }
@@ -90,3 +92,5 @@ export type WsMessage =
 
 
 export * from "./setup.ts";
+export * from "./answer-style.ts";
+export * from "./answer-blocks.ts";
