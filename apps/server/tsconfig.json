@@ -1,0 +1,11 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist",
+    "types": ["bun", "node"],
+    "noEmit": true
+  },
+  "references": [{ "path": "../../packages/shared" }, { "path": "../../packages/ai" }],
+  "include": ["src/**/*.ts"]
+}

@@ -1,0 +1,42 @@
+{
+  "manifest_version": 3,
+  "name": "Interview Copilot",
+  "version": "0.1.0",
+  "description": "A private AI widget over Google Meet / Teams-web: interviewer question assist and interviewee answer assist.",
+  "minimum_chrome_version": "116",
+  "background": {
+    "service_worker": "service-worker.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://meet.google.com/*",
+        "https://teams.microsoft.com/*",
+        "https://teams.live.com/*"
+      ],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "host_permissions": [
+    "http://127.0.0.1/*",
+    "http://localhost/*"
+  ],
+  "permissions": ["storage"],
+  "commands": {
+    "toggle-widget": {
+      "suggested_key": { "default": "Alt+Shift+I" },
+      "description": "Show/hide the Interview Copilot widget"
+    },
+    "suggest-now": {
+      "suggested_key": { "default": "Alt+Shift+S" },
+      "description": "Generate a suggestion now"
+    },
+    "switch-mode": {
+      "suggested_key": { "default": "Alt+Shift+M" },
+      "description": "Switch between interviewer and interviewee mode"
+    }
+  },
+  "icons": { "128": "icon128.png" }
+}

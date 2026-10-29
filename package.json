@@ -1,0 +1,26 @@
+{
+  "name": "interview-copilot",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AI interview assistant that runs as a browser-extension widget over web meetings (Google Meet / Teams-web). Interviewer and interviewee modes; pick provider (kiro/claude/cursor) and model.",
+  "workspaces": [
+    "packages/shared",
+    "packages/ai",
+    "packages/stt",
+    "apps/server",
+    "apps/extension"
+  ],
+  "scripts": {
+    "typecheck": "node node_modules/typescript/bin/tsc -p tsconfig.json && node node_modules/typescript/bin/tsc -p apps/extension/tsconfig.json --noEmit",
+    "build": "node node_modules/typescript/bin/tsc -p tsconfig.json",
+    "test": "bun test",
+    "dev:server": "bun run --cwd apps/server dev",
+    "ext:build": "node node_modules/vite/bin/vite.js build --config apps/extension/vite.config.ts",
+    "clean": "node -e \"require('fs').rmSync('node_modules/.tmp',{recursive:true,force:true})\""
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3",
+    "@types/node": "^22.7.5",
+    "@types/bun": "^1.1.11"
+  }
+}
