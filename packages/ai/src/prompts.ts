@@ -3,7 +3,7 @@ import type {
   RoleContext,
   TranscriptLine,
 } from "@interview-copilot/shared";
-import { styleDirective } from "@interview-copilot/shared";
+import { styleDirective, classifyLine } from "@interview-copilot/shared";
 
 /** Render the recent transcript as "Speaker: text" lines, newest last. */
 export function renderTranscript(
@@ -35,16 +35,13 @@ export function lastLine(
 /**
  * Heuristic (Phase 5.3): did the other party just ask a question?
  * Used by interviewee mode to decide when to offer an answer draft.
+ * Phase 23.1 generalised the logic into the shared `classifyLine`; this stays
+ * as a thin wrapper so existing callers keep working.
  */
 export function wasQuestionJustAsked(transcript: TranscriptLine[]): boolean {
   const last = lastLine(transcript);
   if (!last) return false;
-  const t = last.text.trim();
-  if (t.endsWith("?")) return true;
-  // Interrogative openers even without a '?' (captions often drop punctuation).
-  return /^(what|why|how|when|where|who|which|can you|could you|would you|tell me|describe|walk me|do you|have you|are you|give me an example)\b/i.test(
-    t,
-  );
+  return classifyLine(last.text).isQuestion;
 }
 
 function contextBlock(ctx: RoleContext | undefined, mode: "interviewer" | "interviewee"): string {

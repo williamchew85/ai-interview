@@ -55,6 +55,9 @@ input, select, textarea { width:100%; box-sizing:border-box; background:#17181a;
 textarea { resize:vertical; min-height:36px; }
 .cvrow { display:flex; align-items:center; gap:6px; margin:2px 0 4px; }
 .cvname { font-size:11px; color:#81c995; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.analysis { display:flex; flex-wrap:wrap; gap:4px; margin-bottom:6px; }
+.analysis .qtype { font-size:10px; text-transform:capitalize; padding:1px 6px; border-radius:999px; background:#1b2a3f; color:#8ab4f8; border:1px solid #2f4664; }
+.analysis .topic { font-size:10px; padding:1px 6px; border-radius:999px; background:#2a2d31; color:#9aa0a6; border:1px solid #3a3d42; }
 .foot { display:flex; gap:6px; padding:8px 10px; border-top:1px solid #2c2f34; }
 .hidden { display:none; }
 @media (prefers-reduced-motion: no-preference) { .suggestion.generating::after { content:' ▍'; animation: blink 1s steps(2) infinite; } }
@@ -75,6 +78,8 @@ export class CopilotWidget {
   private autoItems: Array<{ q: string; a: string }> = [];
   /** Phase 19.5: transient error toast. */
   private toast: string | undefined;
+  /** Phase 23.5: caption-analysis strip (question type + topic chips). */
+  private analysis: { questionType?: string; topics: string[] } = { topics: [] };
 
   constructor(settings: WidgetSettings, cb: WidgetCallbacks) {
     this.settings = settings;
@@ -119,6 +124,9 @@ export class CopilotWidget {
   setSettings(s: WidgetSettings): void { this.settings = s; this.render(); }
   setCaptionsOn(on: boolean): void { this.captionsOn = on; this.render(); }
   setTranscript(t: TranscriptLine[]): void { this.transcript = t; this.render(); }
+
+  /** Phase 23.5: update the caption-analysis strip. */
+  setAnalysis(a: { questionType?: string; topics: string[] }): void { this.analysis = a; this.render(); }
 
   beginGenerating(): void { this.generating = true; this.suggestionText = ""; this.metaText = ""; this.render(); }
   appendChunk(text: string): void { this.suggestionText += text; this.render(); }
@@ -204,6 +212,11 @@ export class CopilotWidget {
         <div class="body">
           ${this.captionsOn ? "" : `<div class="banner">Captions are off. Turn on the meeting's live captions so Copilot can read the conversation.</div>`}
           ${this.toast ? `<div class="banner" style="background:#3b1d1d;color:#f28b82;border-color:#5c2a2a">${this.esc(this.toast)}</div>` : ""}
+          ${(this.analysis.questionType || this.analysis.topics.length) ? `
+          <div class="analysis">
+            ${this.analysis.questionType ? `<span class="qtype">${this.esc(this.analysis.questionType)} Q</span>` : ""}
+            ${this.analysis.topics.slice(0, 5).map((t) => `<span class="topic">${this.esc(t)}</span>`).join("")}
+          </div>` : ""}
           ${s.answerMode === "auto" && this.autoItems.length ? `
           <div class="auto-stream">
             ${this.autoItems.slice(-10).map((it) => `<div class="auto-item"><div class="auto-q">${this.esc(it.q)}</div><div class="auto-a">${this.renderBlocks(it.a)}</div></div>`).join("")}

@@ -318,7 +318,12 @@
 - [x] 17.3 Debounce + de-dup so a question is answered once; cancel a stale auto-answer when a newer question arrives (AbortSignal). *(De-dup via normalized `questionKey` Set; `runSuggest` aborts the previous in-flight request.)*
 - [x] 17.4 **Verify:** feeding a transcript with questions produces exactly one auto-answer each; manual mode never auto-fires (unit tests on the trigger logic). *(8 `AutoAnswerTrigger` tests: fires once per new question, manual never fires, waits for final, reset clears.)*
 
-## Phase 18 — Coding / screenshot assist mode (MeetAssist "Coding") 
+## Phase 18 — Coding / screenshot assist mode (MeetAssist "Coding") — ⏸ KIV (parked, user 2026-10-30)
+
+> **Parked (user, 2026-10-30):** keep in view but do not build further for now — focus shifted to
+> caption analysis (Phase 23). 18.2 (coding prompt + `/api/coding`) already shipped; the screenshot→vision
+> pipeline (18.1/18.3) and the in-widget code window stay on hold until un-parked. Nothing is deleted.
+
 
 - [~] 18.1 **Screenshot capture**: capture the current screen/window and attach it to the AI request (MeetAssist `capture-screenshot` / `screen:capture-all`). In the extension this uses `chrome.tabs.captureVisibleTab` / `getDisplayMedia`; in the Electron build, `desktopCapturer`. *(Service worker `capture-screenshot` handler via `captureVisibleTab` + `activeTab`/`tabs` permission done; attaching the image bytes into the request (vision model) is pending.)*
 - [x] 18.2 **Coding mode**: a dedicated prompt + a **code window** (`ma-code-block`) for "solve/continue this coding problem", with language selection (`codingLanguage`) and clear-the-code-window action. *(`buildCodingPrompt` + `CODING_LANGUAGES` in `packages/ai`; `POST /api/coding` endpoint; `codingLanguage` setting. The in-widget code window UI is a follow-up.)*
@@ -394,3 +399,55 @@
       into `context.background` and then into the interviewee prompt (`contextBlock` includes it); `bun run typecheck`
       green; web builds. *(Live PDF/DOCX parse + the actual file-picker interaction need a user run — this host can't
       drive a browser file dialog; the `.txt` path and the pure normaliser are fully testable here.)*
+
+---
+
+# ENHANCEMENT (2026-10-30) — Caption analysis (focus; Phase 18 parked)
+
+> **User direction (2026-10-30):** KIV Phase 18, focus on **caption analysis**. Phase 12 already
+> *captures* the meeting's live captions (Meet/Teams DOM adapters + de-dup buffer) and Phase 5.3 has a
+> bare `wasQuestionJustAsked` heuristic. Caption ANALYSIS is the understanding layer ON TOP of that raw
+> stream: classify and segment what is being said so assist fires at the right moment, on the right
+> speaker, with the right intent — fewer wasted suggestions, better auto-answer timing.
+
+## DECISIONS (caption analysis) — resolve before Phase 23
+
+- **D12 — WHERE caption analysis runs + HOW smart it is. ✅ Default chosen: pure + rule-based in `packages/shared`, keyless.**
+  - **Chosen:** a **pure, framework-free analysis module in `packages/shared`** that takes the existing
+    `TranscriptLine[]` and returns structured signals — no new service, no model call, reused by all three
+    surfaces (extension overlay, standalone call, Electron) and fully unit-testable. It SUPERSEDES the
+    one-off `wasQuestionJustAsked` in `packages/ai` by generalising it (that stays as a thin re-export so
+    nothing breaks).
+  - *Rejected:* an LLM "analyse these captions" pass (adds latency + a model round-trip just to classify —
+    the assist call already reasons over the transcript), and a server-side analysis route (breaks the
+    local-first, no-storage stance; the extension already holds the caption stream in-page).
+  - *Escalation path (noted, not built):* if rule-based intent proves too blunt, the SAME module can gain an
+    optional provider-backed classifier behind the interface — but only when a concrete gap shows up.
+
+## Phase 23 — Caption analysis (understanding layer over Phase 12 captions) (D12)
+
+- [x] 23.1 **Question detection v2** (`packages/shared/src/caption-analysis.ts`): generalise `wasQuestionJustAsked`
+      into `classifyLine(line): { isQuestion, questionType }` where questionType ∈ behavioral / technical /
+      situational / factual / smalltalk — interrogative openers + "tell me about" / "walk me through" / "how would
+      you" patterns, punctuation-optional (captions drop '?'). Re-export the old helper from `packages/ai` so
+      Phase 5.3/17 callers keep working.
+- [x] 23.2 **Speaker-turn segmentation** (`segmentTurns(lines)`): group consecutive same-speaker finals into
+      coherent turns (collapse caption fragments into one utterance), so analysis + prompts see "the question"
+      as one unit instead of 4 partial caption lines. Interviewer-vs-candidate turn tagging from the Phase 12
+      speaker attribution.
+- [x] 23.3 **Topic / keyword extraction** (`extractTopics(turns)`): lightweight keyword + noun-phrase signal
+      (stopword-filtered, frequency-ranked) over the recent window — used to (a) avoid re-asking a covered area
+      in interviewer mode, (b) surface "they asked about X" chips, (c) feed the Phase 10 summary. No ML; a small
+      deterministic tokeniser.
+- [x] 23.4 **Answer-opportunity signal** (`shouldAssist(turns, mode, lastAssistedKey)`): decide when assist is
+      genuinely warranted — a NEW question turn aimed at the user (interviewee) or a completed candidate answer
+      worth a follow-up (interviewer) — de-duped against the last handled turn. Replaces the ad-hoc auto-answer
+      trigger's inline question check with this richer signal; `AutoAnswerTrigger` (Phase 17) consumes it.
+- [x] 23.5 **Wire into the widget**: show a small analysis strip — detected question type + topic chips — above
+      the suggestion, and gate the Auto-mode fire on `shouldAssist`. Keep it quiet (no chip spam); reduced-motion
+      respected; everything in-page, nothing sent anywhere.
+- [x] 23.6 **Verify:** unit tests for `classifyLine` (each question type + non-question), `segmentTurns` (fragment
+      collapse + speaker grouping), `extractTopics` (stopword filtering, ranking), and `shouldAssist` (fires once
+      per new question, not on smalltalk); `bun run typecheck` green; extension builds. *(Deterministic + pure, so
+      fully testable on this host — no live-meeting dependency for the logic; the in-widget strip's real-tab look
+      is the only user-run check.)* *(Built: `packages/shared/src/caption-analysis.ts` with `classifyLine` (5 question types), `segmentTurns`, `extractTopics` (deterministic tokeniser + bigrams), `shouldAssist` (mode-aware, de-duped); `wasQuestionJustAsked` now delegates to `classifyLine`; content script computes turns per final caption, shows the analysis strip (question-type + topic chips) and gates Auto-mode on `shouldAssist` — the old `/api/question-asked` round-trip is gone from the auto path. 11 tests; 125/125 pass; 4 typechecks 0; extension builds (content.js 22.7 kB).)*
