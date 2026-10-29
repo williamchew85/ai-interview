@@ -45,6 +45,10 @@ const STYLE = `
 .line .sp { color:#8ab4f8; font-weight:600; margin-right:4px; }
 .line.local .sp { color:#81c995; }
 .banner { background:#3b2f17; color:#fdd663; border:1px solid #5c4a1f; border-radius:6px; padding:7px 9px; font-size:12px; }
+.auto-stream { max-height:220px; overflow:auto; margin-bottom:8px; display:flex; flex-direction:column; gap:6px; }
+.auto-item { background:#17181a; border:1px solid #2c2f34; border-radius:8px; padding:8px; }
+.auto-q { font-weight:600; color:#8ab4f8; margin-bottom:4px; }
+.auto-a { color:#e8eaed; }
 label { display:block; font-size:11px; color:#9aa0a6; margin:6px 0 2px; }
 input, select, textarea { width:100%; box-sizing:border-box; background:#17181a; color:#e8eaed;
   border:1px solid #3a3d42; border-radius:6px; padding:5px; font:inherit; }
@@ -65,6 +69,10 @@ export class CopilotWidget {
   private metaText = "";
   private captionsOn = false;
   private transcript: TranscriptLine[] = [];
+  /** Phase 17.2: scrollable Q→A card stream for Auto mode. */
+  private autoItems: Array<{ q: string; a: string }> = [];
+  /** Phase 19.5: transient error toast. */
+  private toast: string | undefined;
 
   constructor(settings: WidgetSettings, cb: WidgetCallbacks) {
     this.settings = settings;
@@ -118,6 +126,21 @@ export class CopilotWidget {
   }
   endGenerating(): void { this.generating = false; this.render(); }
   showVisible(v: boolean): void { this.host.style.display = v ? "" : "none"; }
+
+  /** Phase 17.2: append a Q→A card (Auto mode) and render the stream. */
+  pushAutoItem(q: string, a: string): void {
+    this.autoItems.push({ q, a });
+    if (this.autoItems.length > 20) this.autoItems.shift();
+    this.render();
+  }
+  clearAutoItems(): void { this.autoItems = []; this.render(); }
+
+  /** Phase 19.5: show a transient error toast. */
+  showToast(msg: string): void {
+    this.toast = msg;
+    this.render();
+    setTimeout(() => { this.toast = undefined; this.render(); }, 4000);
+  }
 
   private esc(s: string): string {
     return s.replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]!));
@@ -178,6 +201,11 @@ export class CopilotWidget {
         </div>`}
         <div class="body">
           ${this.captionsOn ? "" : `<div class="banner">Captions are off. Turn on the meeting's live captions so Copilot can read the conversation.</div>`}
+          ${this.toast ? `<div class="banner" style="background:#3b1d1d;color:#f28b82;border-color:#5c2a2a">${this.esc(this.toast)}</div>` : ""}
+          ${s.answerMode === "auto" && this.autoItems.length ? `
+          <div class="auto-stream">
+            ${this.autoItems.slice(-10).map((it) => `<div class="auto-item"><div class="auto-q">${this.esc(it.q)}</div><div class="auto-a">${this.renderBlocks(it.a)}</div></div>`).join("")}
+          </div>` : ""}
           <div class="suggestion ${this.generating ? "generating" : ""}">${this.suggestionText ? this.renderBlocks(this.suggestionText) : '<span style="color:#9aa0a6">No suggestion yet — press "' + suggestLabel + '".</span>'}</div>
           <div class="meta">${this.metaText ? `<span class="chip">${this.esc(this.metaText)}</span>` : ""}${this.suggestionText ? '<button data-act="copy">Copy</button>' : ""}</div>
           ${compact ? "" : `

@@ -59,8 +59,23 @@ async function main(): Promise<void> {
         body: JSON.stringify({ mode: settings.mode, provider: settings.provider, model: settings.model, transcript: buffer.recent() }),
       });
       const { asked } = (await r.json()) as { asked: boolean };
-      if (asked) { answered.add(key); void runSuggest(); }
+      if (asked) { answered.add(key); void autoAnswerCard(line.text.trim()); }
     } catch { /* server down; manual still works */ }
+  }
+
+  // Phase 17.2: run one auto-answer and append it as a Q→A card.
+  async function autoAnswerCard(question: string): Promise<void> {
+    const req = assistRequestFrom(settings, buffer.recent());
+    let answer = "";
+    await assistStream(
+      req,
+      {
+        onChunk: (t) => { answer += t; },
+        onError: () => { answer = answer || "[server unreachable]"; },
+      },
+      new AbortController().signal,
+    );
+    widget.pushAutoItem(question, answer.trim());
   }
 
   async function patch(p: Partial<WidgetSettings>): Promise<void> {
