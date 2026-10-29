@@ -6,9 +6,12 @@ import {
   buildPrompt,
   wasQuestionJustAsked,
   buildCodingPrompt,
+  buildSummaryPrompt,
   type CodingRequest,
+  type SummaryRequest,
 } from "@interview-copilot/ai";
 import type { Runner } from "@interview-copilot/ai";
+import { WhisperTranscriber, type WhisperRunner } from "@interview-copilot/stt";
 
 /**
  * Builds the HTTP request handler (Bun.serve compatible). A Runner can be
@@ -21,8 +24,10 @@ import type { Runner } from "@interview-copilot/ai";
  *   POST /api/assist          -> one-shot Suggestion JSON
  *   POST /api/assist/stream   -> text/event-stream of the suggestion (D1)
  *   POST /api/question-asked  -> { asked: boolean } heuristic (Phase 5.3)
+ *   POST /api/summary         -> { summary, fallback } post-call AI summary (Phase 10.1)
+ *   POST /api/transcribe      -> { lines, available } local-Whisper STT (Phase 9)
  */
-export function createApp(opts: { runner?: Runner } = {}) {
+export function createApp(opts: { runner?: Runner; whisperRunner?: WhisperRunner; whisperBinary?: string } = {}) {
   const registry = new ProviderRegistry(opts.runner);
 
   function json(body: unknown, status = 200): Response {
@@ -159,6 +164,61 @@ export function createApp(opts: { runner?: Runner } = {}) {
     }
   }
 
+  /** Phase 10.1 — post-call AI summary (key questions, answer quality). */
+  async function handleSummary(req: Request): Promise<Response> {
+    let body: SummaryRequest;
+    try {
+      body = (await req.json()) as SummaryRequest;
+    } catch {
+      return json({ error: "invalid JSON body" }, 400);
+    }
+    if (body.mode !== "interviewer" && body.mode !== "interviewee") {
+      return json({ error: "mode must be interviewer|interviewee" }, 400);
+    }
+    if (!Array.isArray(body.transcript)) {
+      return json({ error: "transcript must be an array" }, 400);
+    }
+    const provider = registry.get("kiro");
+    const prompt = buildSummaryPrompt(body);
+    if (!provider || !(await provider.isAvailable())) {
+      return json({ summary: "", fallback: true, reason: "no provider available" });
+    }
+    try {
+      const summary = await provider.generate(prompt, { signal: req.signal });
+      return json({ summary, fallback: false });
+    } catch {
+      return json({ summary: "", fallback: true, reason: "provider errored" });
+    }
+  }
+
+  /** Phase 9 — local-Whisper transcription of a finished WAV path (no cloud STT). */
+  async function handleTranscribe(req: Request): Promise<Response> {
+    if (!opts.whisperRunner) {
+      return json({ lines: [], available: false, reason: "whisper runner not configured" });
+    }
+    let body: { wavPath?: string; model?: string; language?: string };
+    try {
+      body = (await req.json()) as typeof body;
+    } catch {
+      return json({ error: "invalid JSON body" }, 400);
+    }
+    if (!body.wavPath) return json({ error: "wavPath required" }, 400);
+    const wh = new WhisperTranscriber(opts.whisperRunner, {
+      binary: opts.whisperBinary,
+      model: body.model,
+      language: body.language,
+    });
+    if (!(await wh.isAvailable())) {
+      return json({ lines: [], available: false, reason: "whisper binary not found" });
+    }
+    try {
+      const lines = await wh.transcribeFile(body.wavPath);
+      return json({ lines, available: true });
+    } catch (e) {
+      return json({ lines: [], available: true, error: (e as Error).message }, 500);
+    }
+  }
+
   async function fetchHandler(req: Request): Promise<Response> {
     const url = new URL(req.url);
     if (req.method === "GET" && url.pathname === "/api/health") {
@@ -181,6 +241,12 @@ export function createApp(opts: { runner?: Runner } = {}) {
     }
     if (req.method === "POST" && url.pathname === "/api/coding") {
       return handleCoding(req);
+    }
+    if (req.method === "POST" && url.pathname === "/api/summary") {
+      return handleSummary(req);
+    }
+    if (req.method === "POST" && url.pathname === "/api/transcribe") {
+      return handleTranscribe(req);
     }
     return json({ error: "not found" }, 404);
   }

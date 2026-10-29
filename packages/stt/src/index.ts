@@ -36,3 +36,12 @@ export interface SttProvider {
 export { TranscriptMerger } from "./merge.ts";
 export { WebSpeechSttProvider, isSupported } from "./web-speech.ts";
 export { playDemo, demoToTranscriptLine, DEMO_SCRIPT, type DemoLine } from "./demo.ts";
+export {
+  WhisperTranscriber,
+  parseWhisperOutput,
+  whisperArgv,
+  type WhisperRunner,
+  type WhisperRunResult,
+  type WhisperOptions,
+  type WhisperSegment,
+} from "./whisper.ts";

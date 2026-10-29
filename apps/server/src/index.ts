@@ -2,7 +2,19 @@ import { createApp } from "./app.ts";
 import { SignalingRooms, type SignalPeer } from "./signaling.ts";
 
 const port = Number(process.env.PORT ?? 8791);
-const app = createApp();
+const app = createApp({
+  // Phase 9 — back /api/transcribe with a real subprocess runner (local Whisper).
+  whisperBinary: process.env.WHISPER_BINARY,
+  whisperRunner: async (cmd: string[]) => {
+    const proc = Bun.spawn(cmd, { stdout: "pipe", stderr: "pipe" });
+    const [stdout, stderr, code] = await Promise.all([
+      new Response(proc.stdout).text(),
+      new Response(proc.stderr).text(),
+      proc.exited,
+    ]);
+    return { code, stdout, stderr };
+  },
+});
 const rooms = new SignalingRooms();
 
 interface WsData {
