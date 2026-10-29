@@ -1,17 +1,33 @@
 import { useEffect, useRef, useState } from "react";
-import type { TranscriptLine } from "@interview-copilot/shared";
+import type { TranscriptLine, IceConfig } from "@interview-copilot/shared";
+import { DEFAULT_STUN_URLS } from "@interview-copilot/shared";
 import { TranscriptMerger, WebSpeechSttProvider, isSupported } from "@interview-copilot/stt";
 
 const SERVER_WS = "ws://127.0.0.1:8791/ws";
-const ICE = [{ urls: "stun:stun.l.google.com:19302" }];
+const SERVER_HTTP = "http://127.0.0.1:8791";
+const FALLBACK_ICE: RTCIceServer[] = [{ urls: DEFAULT_STUN_URLS }];
+
+/** Fetch ICE/TURN config from the server (Phase 8); fall back to public STUN. */
+async function fetchIce(): Promise<RTCIceServer[]> {
+  try {
+    const res = await fetch(`${SERVER_HTTP}/api/ice`);
+    const cfg = (await res.json()) as IceConfig;
+    if (Array.isArray(cfg.iceServers) && cfg.iceServers.length > 0) {
+      return cfg.iceServers as RTCIceServer[];
+    }
+  } catch { /* server down / offline: use STUN fallback */ }
+  return FALLBACK_ICE;
+}
 
 type ConnState = "idle" | "connecting" | "connected" | "peer-left" | "error";
 
 /**
  * Phase 2.2-2.4 + 3.3 — standalone 1:1 WebRTC call (optional mode; the overlay
- * is the primary surface). STUN-only (D2); TURN is Phase 8. Each peer runs
- * Web Speech on its OWN mic and sends finals over a data channel; the other
- * side re-tags them speaker="remote" and the TranscriptMerger unifies both.
+ * is the primary surface). ICE/TURN comes from GET /api/ice (Phase 8): STUN by
+ * default, plus a TURN relay for symmetric NATs when the operator configures
+ * one. Each peer runs Web Speech on its OWN mic and sends finals over a data
+ * channel; the other side re-tags them speaker="remote" and the TranscriptMerger
+ * unifies both.
  */
 export function CallScreen({ room }: { room: string }) {
   const localRef = useRef<HTMLVideoElement>(null);
@@ -72,7 +88,9 @@ export function CallScreen({ room }: { room: string }) {
         localStream.current = stream;
         if (localRef.current) localRef.current.srcObject = stream;
 
-        const pc = new RTCPeerConnection({ iceServers: ICE });
+        const iceServers = await fetchIce();
+        if (cancelled) { stream.getTracks().forEach((t) => t.stop()); return; }
+        const pc = new RTCPeerConnection({ iceServers });
         pcRef.current = pc;
         stream.getTracks().forEach((t) => pc.addTrack(t, stream));
 
