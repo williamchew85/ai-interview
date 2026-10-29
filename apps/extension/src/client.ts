@@ -89,6 +89,10 @@ export interface WidgetSettings {
   screenShareSafe: boolean;
   /** Panel opacity 0.4–1. */
   opacity: number;
+  /** Phase 17: auto vs manual answer mode. */
+  answerMode: "auto" | "manual";
+  /** Phase 18: coding-mode language. */
+  codingLanguage: string;
   jobOrRole?: string;
   focusAreas?: string;
   background?: string;
@@ -103,6 +107,8 @@ export const DEFAULT_SETTINGS: WidgetSettings = {
   compact: true,
   screenShareSafe: true,
   opacity: 1,
+  answerMode: "manual",
+  codingLanguage: "python",
 };
 
 const STORAGE_KEY = "ic_settings";

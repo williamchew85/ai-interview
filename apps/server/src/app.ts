@@ -4,6 +4,8 @@ import {
   fallbackForRequest,
   buildPrompt,
   wasQuestionJustAsked,
+  buildCodingPrompt,
+  type CodingRequest,
 } from "@interview-copilot/ai";
 import type { Runner } from "@interview-copilot/ai";
 
@@ -132,6 +134,29 @@ export function createApp(opts: { runner?: Runner } = {}) {
     return json({ asked: wasQuestionJustAsked(parsed.transcript) });
   }
 
+  /** Phase 18 — coding assist. Body: { provider, model, language, problem?, code?, screenshots? }. */
+  async function handleCoding(req: Request): Promise<Response> {
+    let body: CodingRequest & { provider?: string; model?: string };
+    try {
+      body = (await req.json()) as CodingRequest & { provider?: string; model?: string };
+    } catch {
+      return json({ error: "invalid JSON body" }, 400);
+    }
+    if (!body.language) return json({ error: "language required" }, 400);
+    const now = Date.now();
+    const provider = registry.get((body.provider ?? "kiro") as "kiro" | "claude" | "cursor");
+    const prompt = buildCodingPrompt(body);
+    if (!provider || !(await provider.isAvailable())) {
+      return json({ id: `c_${now}`, text: "// No provider available — start a CLI (kiro-cli/claude).", fallback: true, ts: now });
+    }
+    try {
+      const text = await provider.generate(prompt, { model: body.model, signal: req.signal });
+      return json({ id: `c_${now}`, text, fallback: false, ts: now });
+    } catch {
+      return json({ id: `c_${now}`, text: "// Coding assist failed — the provider errored.", fallback: true, ts: now });
+    }
+  }
+
   async function fetchHandler(req: Request): Promise<Response> {
     const url = new URL(req.url);
     if (req.method === "GET" && url.pathname === "/api/health") {
@@ -148,6 +173,9 @@ export function createApp(opts: { runner?: Runner } = {}) {
     }
     if (req.method === "POST" && url.pathname === "/api/question-asked") {
       return handleQuestionAsked(req);
+    }
+    if (req.method === "POST" && url.pathname === "/api/coding") {
+      return handleCoding(req);
     }
     return json({ error: "not found" }, 404);
   }

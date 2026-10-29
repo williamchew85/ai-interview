@@ -23,7 +23,7 @@
     "http://127.0.0.1/*",
     "http://localhost/*"
   ],
-  "permissions": ["storage"],
+  "permissions": ["storage", "activeTab", "tabs"],
   "commands": {
     "toggle-widget": {
       "suggested_key": { "default": "Alt+Shift+I" },
