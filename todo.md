@@ -159,7 +159,7 @@
 ## Later / optional phases (not MVP)
 
 ## Phase 8 — TURN relay for hard NATs (D2)
-- [ ] 8.1 Optional coturn config + env-driven ICE server list so calls work across symmetric NATs. (Hosting cost — opt-in.)
+- [x] 8.1 Optional coturn config + env-driven ICE server list so calls work across symmetric NATs. (Hosting cost — opt-in.) *(`buildIceConfig` in `packages/shared` reads `TURN_URLS`/`TURN_USERNAME`/`TURN_PASSWORD`/`STUN_URLS` from env; `GET /api/ice` serves it; `CallScreen` fetches it (STUN fallback when the server is down or no TURN set). `.env.example` documents the coturn vars. 6 tests. The operator still provisions the actual coturn relay.)
 
 ## Phase 9 — Server-side STT (Whisper) (D4)
 - [ ] 9.1 Local-Whisper `SttProvider` for privacy / non-Chrome browsers / remote-speaker transcription. **NOTE (2026-10-30):** this is the SAME capability as Phase 20.4 (loopback + local Whisper for the Electron overlay) — build it ONCE in `packages/stt` and consume it from both. Do not implement Whisper twice.
@@ -345,6 +345,6 @@
 
 ## Phase 21 — Onboarding & guided demo (MeetAssist onboarding parity)
 
-- [~] 21.1 First-run **onboarding** flow: permission checks, provider/model pick, mode pick, and a one-screen "how it works". *(Provider/model + mode pick already exist in the setup screen (Phase 6); a dedicated first-run onboarding wrapper + "seen" flag is pending.)*
+- [x] 21.1 First-run **onboarding** flow: permission checks, provider/model pick, mode pick, and a one-screen "how it works". *(`Onboarding.tsx` one-screen "how it works" (`ONBOARDING_STEPS`) gated on a `ic_onboarding_seen` flag via pure `hasSeenOnboarding`/`markOnboardingSeen` helpers in `packages/shared`; `main.tsx` shows it on first run, then the setup screen. Provider/model + mode pick live in the setup screen (Phase 6). Explicit mic/screen permission prompts are a follow-up on the Electron build.)*
 - [x] 21.2 **Guided demo** ("demo:play/stop/clip"): a scripted sample meeting transcript that plays so a new user sees interviewer + interviewee assist without a live call. *(`DEMO_SCRIPT` + `playDemo()`/cancel in `packages/stt`, tested; feeds the real assist pipeline via the transcript buffer.)*
 - [ ] 21.3 **Verify:** onboarding completes and persists a "seen" flag; demo plays a canned transcript through the real assist pipeline (deterministic fallback, no CLI needed).

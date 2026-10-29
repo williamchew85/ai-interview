@@ -1,4 +1,5 @@
 import type { AssistRequest, Suggestion } from "@interview-copilot/shared";
+import { buildIceConfig } from "@interview-copilot/shared";
 import {
   ProviderRegistry,
   fallbackForRequest,
@@ -16,6 +17,7 @@ import type { Runner } from "@interview-copilot/ai";
  * Routes:
  *   GET  /api/health
  *   GET  /api/providers
+ *   GET  /api/ice             -> ICE/TURN config for the standalone call (Phase 8)
  *   POST /api/assist          -> one-shot Suggestion JSON
  *   POST /api/assist/stream   -> text/event-stream of the suggestion (D1)
  *   POST /api/question-asked  -> { asked: boolean } heuristic (Phase 5.3)
@@ -164,6 +166,9 @@ export function createApp(opts: { runner?: Runner } = {}) {
     }
     if (req.method === "GET" && url.pathname === "/api/providers") {
       return json(await registry.describe());
+    }
+    if (req.method === "GET" && url.pathname === "/api/ice") {
+      return json(buildIceConfig(process.env as Record<string, string | undefined>));
     }
     if (req.method === "POST" && url.pathname === "/api/assist") {
       return handleAssist(req);
