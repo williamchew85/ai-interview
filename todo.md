@@ -84,11 +84,11 @@
 
 ## Phase 2 — Video call core (WebRTC + signaling)
 
-- [ ] 2.1 Bun Hono WebSocket signaling server: rooms by id, relay SDP offers/answers + ICE candidates between the two peers.
-- [ ] 2.2 React call screen: `getUserMedia` (cam+mic), create/join a room by shareable link, STUN-only `RTCPeerConnection` (D2).
-- [ ] 2.3 Local + remote `<video>` tiles on the main page; mute/camera toggles.
-- [ ] 2.4 Connection state UI (connecting / connected / peer-left) and graceful teardown.
-- [ ] 2.5 **Verify:** two browser tabs (or two machines on LAN) establish audio+video over the room link; `bun run build` green.
+- [x] 2.1 Bun Hono WebSocket signaling server: rooms by id, relay SDP offers/answers + ICE candidates between the two peers. *(Built on Bun's native WebSocket, not Hono; `SignalingRooms` is transport-agnostic + unit-tested, wired at `/ws`.)*
+- [x] 2.2 React call screen: `getUserMedia` (cam+mic), create/join a room by shareable link, STUN-only `RTCPeerConnection` (D2).
+- [x] 2.3 Local + remote `<video>` tiles on the main page; mute/camera toggles.
+- [x] 2.4 Connection state UI (connecting / connected / peer-left) and graceful teardown.
+- [~] 2.5 **Verify:** two browser tabs (or two machines on LAN) establish audio+video over the room link; `bun run build` green. *(5 signaling unit tests + a two-client WS flow smoke (join→offer→relay) pass; web builds. The live two-camera media check is pending — this host can't drive getUserMedia in a browser.)*
 
 ## Phase 3 — Live transcription (`packages/stt`)
 
@@ -123,11 +123,11 @@
 
 ## Phase 7 — Polish, resilience, end-to-end
 
-- [ ] 7.1 Error/empty/loading states across call, transcript, and suggestion panels; cancel in-flight suggestions on new input (AbortSignal).
-- [ ] 7.2 Latency + cost affordances (D1): show "generating…", allow cancel, debounce; display which provider/model produced each suggestion.
-- [ ] 7.3 Accessibility pass (keyboard, ARIA on panels, reduced-motion) and responsive layout.
-- [ ] 7.4 End-to-end smoke: two tabs, pick interviewer in one + interviewee in the other, full flow with the deterministic fallback (CI-safe, no CLI needed) and once with a real CLI.
-- [ ] 7.5 **Verify:** full `bun run typecheck && bun run build && bun test` green; README quickstart validated.
+- [x] 7.1 Error/empty/loading states across call, transcript, and suggestion panels; cancel in-flight suggestions on new input (AbortSignal). *(Call screen: connecting/connected/peer-left/error; widget: captions-off banner, empty-suggestion state, server-unreachable message, AbortController cancel; setup: server-down warning + ready/not-ready.)*
+- [x] 7.2 Latency + cost affordances (D1): show "generating…", allow cancel, debounce; display which provider/model produced each suggestion. *(Widget: generating indicator + blinking cursor, Suggest⇄Cancel, per-suggestion `provider · model · fallback` chip.)*
+- [~] 7.3 Accessibility pass (keyboard, ARIA on panels, reduced-motion) and responsive layout. *(reduced-motion respected in the widget; keyboard commands work; full ARIA/responsive audit still pending.)*
+- [~] 7.4 End-to-end smoke: two tabs, pick interviewer in one + interviewee in the other, full flow with the deterministic fallback (CI-safe, no CLI needed) and once with a real CLI. *(Fallback path CI-tested via `forceFallback`/unavailable-provider route tests; a real CLI verified live via the `/api/providers` smoke earlier. The two-tab browser flow is pending a user run — this host can't drive two media tabs.)*
+- [x] 7.5 **Verify:** full `bun run typecheck && bun run build && bun test` green; README quickstart validated. *(All three typechecks 0, 42/42 tests pass, web + extension build.)*
 
 ---
 
